@@ -32,5 +32,5 @@ This is the **notifications bot** of the Weather Monitoring App.
 4. Start tg bot:
 
    ```bash
-    python bot.py
+    python bot/bot.py
    ```
