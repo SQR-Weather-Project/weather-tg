@@ -10,7 +10,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "aiogram (>=3.20.0.post0,<4.0.0)",
-    "fastapi[standard] (>=0.115.12,<0.116.0)"
+    "fastapi[standard] (>=0.115.12,<0.116.0)",
+    "pytest (>=8.3.5,<9.0.0)",
+    "pytest-asyncio (>=0.26.0,<0.27.0)"
 ]
 
 
@@ -24,4 +26,5 @@ black = "^25.1.0"
 flake8 = "^7.2.0"
 isort = "^6.0.1"
 bandit = "^1.8.3"
+pytest-cov = "^6.1.1"
 

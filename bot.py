@@ -7,9 +7,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
 from dotenv import load_dotenv
+
+from handlers import create_router
 from models import NotificationSettings
 
-router = Router()
+router = create_router()
 storage = MemoryStorage()
 
 load_dotenv()
