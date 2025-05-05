@@ -1,17 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from aiogram.types import User, ReplyKeyboardMarkup, Chat
 
-from bot import (
-    start,
-    start_settings,
-    set_frequency,
-    set_parameter,
-    set_filter,
-    set_threshold,
-    set_city,
-    get_user_settings,
-)
+import pytest
+from aiogram.types import Chat, ReplyKeyboardMarkup, User
+
+from bot import (get_user_settings, set_city, set_filter, set_frequency,
+                 set_parameter, set_threshold, start, start_settings)
 from models import NotificationSettings
 
 
@@ -43,7 +36,9 @@ async def test_start_settings():
     state = AsyncMock()
     await start_settings(message_mock, state)
     state.set_state.assert_called_once_with(NotificationSettings.frequency)
-    message_mock.answer.assert_called_once_with("Enter notification frequency (in minutes):")
+    message_mock.answer.assert_called_once_with(
+        "Enter notification frequency (in minutes):"
+    )
 
 
 @pytest.mark.asyncio
@@ -71,7 +66,9 @@ async def test_set_frequency_invalid():
     await set_frequency(message_mock, state)
     state.update_data.assert_not_called()
     state.set_state.assert_not_called()
-    message_mock.answer.assert_called_once_with("⚠️ Please enter a valid positive number (minutes):")
+    message_mock.answer.assert_called_once_with(
+        "⚠️ Please enter a valid positive number (minutes):"
+    )
 
 
 @pytest.mark.asyncio
@@ -85,7 +82,10 @@ async def test_set_parameter():
     call_args, call_kwargs = message_mock.answer.call_args
     reply_markup = call_kwargs.get("reply_markup")
     assert isinstance(reply_markup, ReplyKeyboardMarkup)
-    assert [btn.text for row in reply_markup.keyboard for btn in row] == ["above", "below"]
+    assert [btn.text for row in reply_markup.keyboard for btn in row] == [
+        "above",
+        "below",
+    ]
 
 
 @pytest.mark.asyncio
@@ -97,7 +97,9 @@ async def test_set_filter():
     state.get_data.assert_called_once()
     state.update_data.assert_called_once_with(filter_type="above")
     state.set_state.assert_called_once_with(NotificationSettings.threshold)
-    message_mock.answer.assert_called_once_with("Notify if Temperature is above... (enter threshold value)")
+    message_mock.answer.assert_called_once_with(
+        "Notify if Temperature is above... (enter threshold value)"
+    )
 
 
 @pytest.mark.asyncio
@@ -107,7 +109,9 @@ async def test_set_threshold():
     await set_threshold(message_mock, state)
     state.update_data.assert_called_once_with(threshold=25.5)
     state.set_state.assert_called_once_with(NotificationSettings.city)
-    message_mock.answer.assert_called_once_with("Select a city (optional), or type 'skip':")
+    message_mock.answer.assert_called_once_with(
+        "Select a city (optional), or type 'skip':"
+    )
 
 
 @pytest.mark.asyncio
@@ -135,7 +139,8 @@ async def test_set_city_with_city():
         "✅ Settings saved:\n"
         f"• Frequency: {final_state_data['frequency']} min\n"
         f"• Parameter: {final_state_data['parameter']}\n"
-        f"• Filter: {final_state_data['filter_type']} {final_state_data['threshold']}\n"
+        f"• Filter: {final_state_data['filter_type']} "
+        f"{final_state_data['threshold']}\n"
         f"• City: Moscow"
     )
     message_mock.answer.assert_called_once_with(expected_answer)
@@ -162,16 +167,15 @@ async def test_set_city_skip():
     state.update_data.assert_called_once_with(city=None)
     state.get_data.assert_called_once()
 
-
     expected_answer = (
         "✅ Settings saved:\n"
         f"• Frequency: {final_state_data['frequency']} min\n"
         f"• Parameter: {final_state_data['parameter']}\n"
-        f"• Filter: {final_state_data['filter_type']} {final_state_data['threshold']}\n"
+        f"• Filter: {final_state_data['filter_type']} "
+        f"{final_state_data['threshold']}\n"
         f"• City: Not specified"
     )
     message_mock.answer.assert_called_once_with(expected_answer)
-
 
 
 @pytest.mark.asyncio
@@ -206,5 +210,5 @@ async def test_get_user_settings_no_data():
     await get_user_settings(message_mock, state)
     state.get_data.assert_called_once()
     message_mock.answer.assert_called_once_with(
-        "⚠️ You don't have any saved settings yet. Use /settings to set them up."
+        "⚠️ You don't have any saved settings yet. " "Use /settings to set them up."
     )

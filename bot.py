@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-from aiogram import Bot, Dispatcher, Router
+from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -67,10 +67,7 @@ async def set_parameter(msg: Message, state: FSMContext):
     await msg.answer(
         "Please choose a filter:",
         reply_markup=ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="above")],
-                [KeyboardButton(text="below")]
-            ],
+            keyboard=[[KeyboardButton(text="above")], [KeyboardButton(text="below")]],
             resize_keyboard=True,
         ),
     )
@@ -117,8 +114,7 @@ async def get_user_settings(msg: Message, state: FSMContext):
     data = await state.get_data()
     if not data:
         await msg.answer(
-            "⚠️ You don't have any saved "
-            "settings yet. Use /settings to set them up."
+            "⚠️ You don't have any saved " "settings yet. Use /settings to set them up."
         )
         return
 

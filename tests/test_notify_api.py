@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 from receive_notification_request import app
 
 
