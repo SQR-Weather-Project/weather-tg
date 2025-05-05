@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Flake8
+        uses: py-actions/flake8@v2
+        with:
+          args: "--max-line-length=88 --max-complexity=10"
+
+      - name: Run Bandit
+        uses: jpetrucciani/bandit-check@main
+        with:
+          path: "."
