@@ -1,13 +1,16 @@
 import asyncio
 import os
 
+import aiohttp
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from dotenv import load_dotenv
+from watchfiles import awatch
 
+from config import BACKEND_URL
 from handlers import create_router
 from models import NotificationSettings
 
@@ -23,9 +26,31 @@ dp = Dispatcher(storage=storage)
 
 @router.message(Command("start"))
 async def start(msg: Message):
-    await msg.answer(f"User ID: {msg.from_user.id}")
-    # TODO: добавить простую авторизацию,
-    #  чтобы на фронте понимать, что за уведы
+    command_parts = msg.text.split(maxsplit=1)
+
+    if len(command_parts) == 2:
+        token = command_parts[1]
+        telegram_id = msg.from_user.id
+        auth_token = os.getenv("TELEGRAM_SERVICE_HEADER_TOKEN")
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(
+                    f"{BACKEND_URL}/user/successful_login?authorization_token={auth_token}",
+                    params={
+                        "token": token,
+                        "telegram_id": telegram_id,
+                    },
+                ) as resp:
+                    if resp.status == 200:
+                        await msg.answer(f"⚠️ Для завершения авторизации скопируй ссылку и открой её в браузере: \n\n{(await resp.json())['callback_url']}")
+
+                    else:
+                        await msg.answer(f"⚠️ Ошибка авторизации: {await resp.text()}")
+            except Exception as e:
+                await msg.answer(f"❌ Ошибка запроса: {str(e)}")
+    else:
+        await msg.answer(f"👋 Привет! Твой Telegram ID: {msg.from_user.id}")
 
 
 @router.message(Command("settings"))
