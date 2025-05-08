@@ -6,13 +6,14 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
 from dotenv import load_dotenv
-from watchfiles import awatch
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from config import BACKEND_URL
 from handlers import create_router
 from models import NotificationSettings
+from send_notification import fetch_and_send_weather
 
 router = create_router()
 storage = MemoryStorage()
@@ -20,8 +21,20 @@ storage = MemoryStorage()
 load_dotenv()
 
 bot = Bot(token=os.getenv("TG_BOT_TOKEN"))
-
 dp = Dispatcher(storage=storage)
+
+scheduler = AsyncIOScheduler()
+
+
+class TokenStorage:
+    token = None
+
+
+class Filters:
+    param = None
+    type = None
+    value = None
+    city = None
 
 
 @router.message(Command("start"))
@@ -35,18 +48,27 @@ async def start(msg: Message):
 
         async with aiohttp.ClientSession() as session:
             try:
+                url = (
+                    f"{BACKEND_URL}/user/successful_login?"
+                    f"authorization_token={auth_token}"
+                )
                 async with session.post(
-                    f"{BACKEND_URL}/user/successful_login?authorization_token={auth_token}",
+                    url,
                     params={
                         "token": token,
                         "telegram_id": telegram_id,
                     },
                 ) as resp:
                     if resp.status == 200:
-                        await msg.answer(f"⚠️ Для завершения авторизации скопируй ссылку и открой её в браузере: \n\n{(await resp.json())['callback_url']}")
-
+                        data = await resp.json()
+                        await msg.answer(
+                            f"⚠️ Для завершения авторизации скопируй ссылку и "
+                            f"открой её в браузере: \n\n{data['callback_url']}"
+                        )
+                        TokenStorage.token = data['auth_token']
                     else:
-                        await msg.answer(f"⚠️ Ошибка авторизации: {await resp.text()}")
+                        await msg.answer(
+                            f"⚠️ Ошибка авторизации: {await resp.text()}")
             except Exception as e:
                 await msg.answer(f"❌ Ошибка запроса: {str(e)}")
     else:
@@ -92,7 +114,8 @@ async def set_parameter(msg: Message, state: FSMContext):
     await msg.answer(
         "Please choose a filter:",
         reply_markup=ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="above")], [KeyboardButton(text="below")]],
+            keyboard=[[KeyboardButton(text="above")],
+                      [KeyboardButton(text="below")]],
             resize_keyboard=True,
         ),
     )
@@ -112,7 +135,7 @@ async def set_filter(msg: Message, state: FSMContext):
 async def set_threshold(msg: Message, state: FSMContext):
     await state.update_data(threshold=float(msg.text))
     await state.set_state(NotificationSettings.city)
-    await msg.answer("Select a city (optional), or type 'skip':")
+    await msg.answer("Select a city")
 
 
 @router.message(NotificationSettings.city)
@@ -122,16 +145,29 @@ async def set_city(msg: Message, state: FSMContext):
     else:
         await state.update_data(city=None)
 
-    # TODO: запустить воркер для отправления таких уведов
+    # TODO: запустить воркер для отправления таких уведомлений
 
     data = await state.get_data()
+
+    Filters.param = data["parameter"].lower()
+    Filters.type = data["filter_type"]
+    Filters.value = data["threshold"]
+    Filters.city = data["city"]
+
     await msg.answer(
         f"✅ Settings saved:\n"
-        f"• Frequency: {data['frequency']} min\n"
+        f"• Notifications will be sent every {data['frequency']} min\n"
         f"• Parameter: {data['parameter']}\n"
         f"• Filter: {data['filter_type']} {data['threshold']}\n"
-        f"• City: {data['city'] or 'Not specified'}"
+        f"• City: {data['city']}"
     )
+    scheduler.add_job(
+        fetch_and_send_weather,
+        "interval",
+        minutes=data['frequency'],
+        args=[msg.from_user.id, TokenStorage.token, Filters],
+    )
+    scheduler.start()
 
 
 @router.message(Command("mysettings"))
@@ -139,7 +175,8 @@ async def get_user_settings(msg: Message, state: FSMContext):
     data = await state.get_data()
     if not data:
         await msg.answer(
-            "⚠️ You don't have any saved " "settings yet. Use /settings to set them up."
+            "⚠️ You don't have any saved settings yet. Use "
+            "/settings to set them up."
         )
         return
 
@@ -150,6 +187,11 @@ async def get_user_settings(msg: Message, state: FSMContext):
         f"• Filter: {data.get('filter_type')} {data.get('threshold')}\n"
         f"• City: {data.get('city') or 'Not specified'}"
     )
+
+
+@router.message(Command("stop"))
+async def stop_not(msg: Message):
+    scheduler.remove_all_jobs()
 
 
 async def main():
