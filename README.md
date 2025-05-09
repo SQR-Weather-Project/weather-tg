@@ -23,13 +23,7 @@ This is the **notifications bot** of the Weather Monitoring App.
 
 2. Create `.env` file and put your API token
 
-3. Start the app:
-
-    ```bash
-    poetry run fastapi dev receive_notification_request.py --port 8002
-    ```
-
-4. Start tg bot:
+3. Start tg bot:
 
    ```bash
     python bot/bot.py
