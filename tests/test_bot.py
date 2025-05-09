@@ -27,7 +27,8 @@ def create_mock_message(text, user_id=123):
 async def test_start_command():
     message_mock = create_mock_message("/start", user_id=123)
     await start(message_mock)
-    message_mock.answer.assert_called_once_with(f"User ID: {message_mock.from_user.id}")
+    message_mock.answer.assert_called_once_with(
+        f"👋 Привет! Твой Telegram ID: {message_mock.from_user.id}")
 
 
 @pytest.mark.asyncio
@@ -110,7 +111,7 @@ async def test_set_threshold():
     state.update_data.assert_called_once_with(threshold=25.5)
     state.set_state.assert_called_once_with(NotificationSettings.city)
     message_mock.answer.assert_called_once_with(
-        "Select a city (optional), or type 'skip':"
+        "Select a city"
     )
 
 
@@ -137,43 +138,12 @@ async def test_set_city_with_city():
 
     expected_answer = (
         "✅ Settings saved:\n"
-        f"• Frequency: {final_state_data['frequency']} min\n"
+        f"• Notifications will be send every "
+        f"{final_state_data['frequency']} min\n"
         f"• Parameter: {final_state_data['parameter']}\n"
         f"• Filter: {final_state_data['filter_type']} "
         f"{final_state_data['threshold']}\n"
         f"• City: Moscow"
-    )
-    message_mock.answer.assert_called_once_with(expected_answer)
-
-
-@pytest.mark.asyncio
-async def test_set_city_skip():
-    message_mock = create_mock_message("skip")
-    state = AsyncMock()
-
-    initial_state_data = {
-        "frequency": 15,
-        "parameter": "Pressure",
-        "filter_type": "above",
-        "threshold": 1000,
-    }
-
-    final_state_data = initial_state_data.copy()
-    final_state_data["city"] = None
-    state.get_data = AsyncMock(return_value=final_state_data)
-
-    await set_city(message_mock, state)
-
-    state.update_data.assert_called_once_with(city=None)
-    state.get_data.assert_called_once()
-
-    expected_answer = (
-        "✅ Settings saved:\n"
-        f"• Frequency: {final_state_data['frequency']} min\n"
-        f"• Parameter: {final_state_data['parameter']}\n"
-        f"• Filter: {final_state_data['filter_type']} "
-        f"{final_state_data['threshold']}\n"
-        f"• City: Not specified"
     )
     message_mock.answer.assert_called_once_with(expected_answer)
 
@@ -210,5 +180,6 @@ async def test_get_user_settings_no_data():
     await get_user_settings(message_mock, state)
     state.get_data.assert_called_once()
     message_mock.answer.assert_called_once_with(
-        "⚠️ You don't have any saved settings yet. " "Use /settings to set them up."
+        "⚠️ You don't have any saved settings yet. " "Use "
+        "/settings to set them up."
     )
